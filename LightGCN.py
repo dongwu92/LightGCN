@@ -41,6 +41,7 @@ class LightGCN(object):
         self.log_dir=self.create_model_str()
         self.verbose = args.verbose
         self.Ks = eval(args.Ks)
+        self.n_head = args.n_head
 
 
         '''
@@ -194,8 +195,13 @@ class LightGCN(object):
                 initializer([self.weight_size_list[k], self.weight_size_list[k+1]]), name='W_mlp_%d' % k)
             all_weights['b_mlp_%d' % k] = tf.Variable(
                 initializer([1, self.weight_size_list[k+1]]), name='b_mlp_%d' % k)
+        
+        for k in range(self.n_head):
+            all_weights['H_gc_%d' %k] = tf.Variable(
+                initializer([self.weight_size_list[k], self.weight_size_list[k+1]]), name='H_gc_%d' % k)
 
         return all_weights
+
     def _split_A_hat(self, X):
         A_fold_hat = []
 
@@ -228,6 +234,9 @@ class LightGCN(object):
         return A_fold_hat
 
     def _create_lightgcn_embed(self):
+        # python BGCN.py --dataset amazon-book --regs [1e-5] --embed_size 160 --layer_size [160,160,160] 
+        # --lr 0.00045 --save_flag 1 --pretrain 0 --batch_size 16384 --epoch 600 --verbose 1 --node_dropout [0.1] 
+        # --mess_dropout [0.1,0.1,0.1] --gpu_ids 0 --sub_version 1.224 --n_head 4 --adj_type appnp-ns
         if self.node_dropout_flag:
             A_fold_hat = self._split_A_hat_node_dropout(self.norm_adj)
         else:
@@ -247,6 +256,26 @@ class LightGCN(object):
             all_embeddings += [ego_embeddings]
         all_embeddings=tf.stack(all_embeddings,1)
         all_embeddings=tf.reduce_mean(all_embeddings,axis=1,keepdims=False)
+        u_g_embeddings, i_g_embeddings = tf.split(all_embeddings, [self.n_users, self.n_items], 0)
+        return u_g_embeddings, i_g_embeddings
+
+    def _create_bgcf_embed(self):
+        if args.node_dropout_flag:
+            A_fold_hat = self._split_A_hat_node_dropout(norm_adj)
+        else:
+            A_fold_hat = self._split_A_hat(norm_adj)
+        ego_embeddings = tf.concat([self.weights['user_embedding'], self.weights['item_embedding']], axis=0)
+        all_embeddings = [ego_embeddings]
+        for k in range(0, self.n_layers):
+            temp_embed = []
+            for f in range(self.n_fold):
+                temp_embed.append(tf.sparse_tensor_dense_matmul(A_fold_hat[f], ego_embeddings))
+            side_embeddings = tf.concat(temp_embed, 0)
+            for j in range(args.n_head):
+                ego_embeddings = tf.matmul(side_embeddings, self.weights['H_gc_%d' % j])
+                norm_embeddings = tf.math.l2_normalize(ego_embeddings, axis=1)
+                all_embeddings += [norm_embeddings]
+        all_embeddings = tf.concat(all_embeddings, 1)
         u_g_embeddings, i_g_embeddings = tf.split(all_embeddings, [self.n_users, self.n_items], 0)
         return u_g_embeddings, i_g_embeddings
     

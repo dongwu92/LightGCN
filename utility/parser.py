@@ -26,6 +26,8 @@ def parse_args():
                     help='Interval of evaluation.')
     parser.add_argument('--epoch', type=int, default=1000,
                         help='Number of epoch.')
+    parser.add_argument('--n_head', type=int, default=4,
+                        help='Number of head of multi-head propogation.')
 
     parser.add_argument('--embed_size', type=int, default=64,
                         help='Embedding size.')
