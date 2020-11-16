@@ -5,15 +5,18 @@ Wang Xiang et al. Neural Graph Collaborative Filtering. In SIGIR 2019.
 
 @author: Xiang Wang (xiangwang@u.nus.edu)
 '''
+import os
 import numpy as np
 import random as rd
 import scipy.sparse as sp
 from time import time
 
 class Data(object):
-    def __init__(self, path, batch_size):
+    def __init__(self, path, batch_size, num_epochs, dataset):
         self.path = path
         self.batch_size = batch_size
+        self.num_epochs = num_epochs
+        self.dataset = dataset
 
         train_file = path + '/train.txt'
         test_file = path + '/test.txt'
@@ -73,6 +76,44 @@ class Data(object):
                     
                     uid, test_items = items[0], items[1:]
                     self.test_set[uid] = test_items
+
+    def load_train_temp(self, epoch):
+        np_path = '../train_temp/' + self.dataset + '/'
+        if not os.path.exists(np_path):
+            os.mkdir(np_path)
+        np_name = 'temp_' + str(self.batch_size) + '/epoch_' + str(epoch) + '.npy'
+        if not os.path.exists(np_path + 'temp_' + str(self.batch_size)):
+            os.mkdir(np_path + 'temp_' + str(self.batch_size))
+        if not os.path.exists(np_path + np_name):
+            print("generate train temp @ epoch", epoch, np_path + np_name)
+            dataset = []
+            n_batch = self.n_train // self.batch_size + 1
+            for _ in range(n_batch):
+                users, pos_items, neg_items = self.sample()
+                dataset.append([users, pos_items, neg_items])
+            np.save(np_path + np_name, np.array(dataset))
+        else:
+            dataset = np.load(np_path + np_name)
+        return dataset
+
+    def load_test_temp(self, epoch):
+        np_path = '../test_temp/' + self.dataset + '/'
+        if not os.path.exists(np_path):
+            os.mkdir(np_path)
+        np_name = 'temp_' + str(self.batch_size) + '/epoch_' + str(epoch) + '.npy'
+        if not os.path.exists(np_path + 'temp_' + str(self.batch_size)):
+            os.mkdir(np_path + 'temp_' + str(self.batch_size))
+        if not os.path.exists(np_path + np_name):
+            print("generate test temp @ epoch", epoch, np_path + np_name)
+            dataset = []
+            n_batch = self.n_train // self.batch_size + 1
+            for _ in range(n_batch):
+                users, pos_items, neg_items = self.sample_test()
+                dataset.append([users, pos_items, neg_items])
+            np.save(np_path + np_name, np.array(dataset))
+        else:
+            dataset = np.load(np_path + np_name)
+        return dataset
 
     def get_adj_mat(self):
         try:
