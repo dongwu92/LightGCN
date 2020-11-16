@@ -609,7 +609,7 @@ if __name__ == '__main__':
     should_stop = False
     prev_rec = 0
 
-    for epoch in range(args.epoch):
+    for epoch in range(1, args.epoch + 1):
         t1 = time()
         loss, mf_loss, emb_loss, reg_loss = 0., 0., 0., 0.
         loss_test, mf_loss_test, emb_loss_test, reg_loss_test = 0.,0.,0.,0.
@@ -670,7 +670,7 @@ if __name__ == '__main__':
             loss_test += batch_loss_test / n_batch
             mf_loss_test += batch_mf_loss_test / n_batch
             emb_loss_test += batch_emb_loss_test / n_batch
-            reg_loss_test += batch_reg_loss_test / n_batch
+            # reg_loss_test += batch_reg_loss_test / n_batch
             
         summary_test_loss = sess.run(model.merged_test_loss,
                                      feed_dict={model.test_loss: loss_test, model.test_mf_loss: mf_loss_test,
