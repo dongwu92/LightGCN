@@ -198,10 +198,11 @@ class LightGCN(object):
                 initializer([self.weight_size_list[k], self.weight_size_list[k+1]]), name='W_mlp_%d' % k)
             all_weights['b_mlp_%d' % k] = tf.Variable(
                 initializer([1, self.weight_size_list[k+1]]), name='b_mlp_%d' % k)
-        
-        for k in range(self.n_head):
-            all_weights['H_gc_%d' %k] = tf.Variable(
-                initializer([self.weight_size_list[k], self.weight_size_list[k+1]]), name='H_gc_%d' % k)
+
+        if args.alg_type == 'bgcf':
+            for k in range(self.n_head):
+                all_weights['H_gc_%d' %k] = tf.Variable(
+                    initializer([self.weight_size_list[0], self.weight_size_list[1]]), name='H_gc_%d' % k)
 
         return all_weights
 
