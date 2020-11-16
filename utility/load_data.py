@@ -105,6 +105,33 @@ class Data(object):
             
         return adj_mat, norm_adj_mat, mean_adj_mat,pre_adj_mat
 
+    def get_appnp_mat(self, self_connection=True):
+        try:
+            t1 = time()
+            norm_adj_mat = sp.load_npz(self.path + '/appnp_norm_adj_mat.npz')
+            print('already load adj matrix', norm_adj_mat.shape, time() - t1)
+        except Exception:
+            norm_adj_mat = self.create_appnp_mat(self_connection)
+            sp.save_npz(self.path + '/appnp_norm_adj_mat.npz', norm_adj_mat)
+        return norm_adj_mat
+
+    def create_appnp_mat(self, self_connection):
+        t1 = time()
+        adj_mat = sp.dok_matrix((self.n_users + self.n_items, self.n_users + self.n_items), dtype=np.float32)
+        adj_mat = adj_mat.tolil()
+        R = self.R.tolil()
+
+        adj_mat[:self.n_users, self.n_users:] = R
+        adj_mat[self.n_users:, :self.n_users] = R.T
+        adj_mat = adj_mat.todok()
+        print('already create adjacency matrix', adj_mat.shape, time() - t1)
+
+        A = adj_mat + sp.eye(adj_mat.shape[0]) if self_connection else adj_mat
+        D_vec = np.sum(A, axis=1).A1
+        D_vec_invsqrt_corr = 1 / np.sqrt(D_vec)
+        D_invsqrt_corr = sp.diags(D_vec_invsqrt_corr)
+        return D_invsqrt_corr @ A @ D_invsqrt_corr
+
     def create_adj_mat(self):
         t1 = time()
         adj_mat = sp.dok_matrix((self.n_users + self.n_items, self.n_users + self.n_items), dtype=np.float32)

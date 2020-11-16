@@ -122,6 +122,9 @@ class LightGCN(object):
             
         elif self.alg_type in ['ngcf']:
             self.ua_embeddings, self.ia_embeddings = self._create_ngcf_embed()
+            
+        elif self.alg_type in ['bgcf']:
+            self.ua_embeddings, self.ia_embeddings = self._create_bgcf_embed()
 
         elif self.alg_type in ['gcn']:
             self.ua_embeddings, self.ia_embeddings = self._create_gcn_embed()
@@ -467,20 +470,28 @@ if __name__ == '__main__':
     *********************************************************
     Generate the Laplacian matrix, where each entry defines the decay factor (e.g., p_ui) between two connected nodes.
     """
-    plain_adj, norm_adj, mean_adj,pre_adj = data_generator.get_adj_mat()
     if args.adj_type == 'plain':
+        plain_adj, _, _, _ = data_generator.get_adj_mat()
         config['norm_adj'] = plain_adj
         print('use the plain adjacency matrix')
     elif args.adj_type == 'norm':
+        _, norm_adj, _, pre_adj = data_generator.get_adj_mat()
         config['norm_adj'] = norm_adj
         print('use the normalized adjacency matrix')
     elif args.adj_type == 'gcmc':
+        _, _, mean_adj, _ = data_generator.get_adj_mat()
         config['norm_adj'] = mean_adj
         print('use the gcmc adjacency matrix')
-    elif args.adj_type=='pre':
-        config['norm_adj']=pre_adj
+    elif args.adj_type == 'pre':
+        _, _, _, pre_adj = data_generator.get_adj_mat()
+        config['norm_adj'] = pre_adj
         print('use the pre adjcency matrix')
+    elif args.adj_type == 'bgcf':
+        norm_adj = data_generator.get_appnp_mat(self_connection=False)
+        config['norm_adj'] = norm_adj
+        print('use the appnp adjacency matrix')
     else:
+        _, norm_adj, _, pre_adj = data_generator.get_adj_mat()
         config['norm_adj'] = mean_adj + sp.eye(mean_adj.shape[0])
         print('use the mean adjacency matrix')
     t0 = time()
